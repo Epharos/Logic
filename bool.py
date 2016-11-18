@@ -5,8 +5,9 @@
 #Date : 16th november, 2016
 
 import turtle
+import re
 
-allVars = "abcdefghijklmnopqrstuvwxyz"
+allVars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 width, height = 500, 500
 
 def containsOperator(string, operator) :
@@ -86,21 +87,51 @@ def operate(op, vars1) :
 			lastValue = int(vars1[0]) and int(vars1[1])
 
 			for i in range(2, len(vars1)) :
-				lastValue = lastValue and int(vars1[i])
+				lastValue = convert(lastValue) and int(vars1[i])
 
 		if op == '+' :
 			lastValue = int(vars1[0]) or int(vars1[1])
 
 			for i in range(2, len(vars1)) :
-				lastValue = lastValue or int(vars1[i])
+				lastValue = convert(lastValue) or int(vars1[i])
+
+		return lastValue
  
 	return "Inopérable !"
 
-def calculate(string, *vars1) :
+def calculate(string, vars1 = None) :
 	vars2 = getVars(string)[1]
 
-	for i in range(len(vars2)) :
-		string = string.replace(vars2[i], str(vars1[i]))
+	if vars1 is not None :
+		for i in range(len(vars2)) :
+			string = string.replace(vars2[i], str(vars1[i]))
+
+	prior = re.split("(\((?s)(.*?)\))", string)
+
+	deleted = 0
+	
+	for i in range(len(prior)) :
+		if len(prior[i - deleted]) > 0 :
+			if prior[i - deleted][0] != '(' :
+				del prior[i - deleted]
+				deleted += 1
+		else :
+			del prior[i - deleted]
+			deleted += 1
+
+	prior2 = list()
+
+	for i in prior :
+		prior2.append(i[1:len(i) - 1])
+
+	for i, v in enumerate(prior2) :
+		prior2[i] = calculate(v)
+
+	for i in range(len(prior)) :
+		string = string.replace(str(prior[i]), str(prior2[i]))
+
+	string = string.replace("!0", "1")
+	string = string.replace("!1", "0")
 
 	toOperateOr = string.split('+')
 
@@ -108,7 +139,10 @@ def calculate(string, *vars1) :
 		if len(toOperateOr[i].split('.')) > 1 :
 			toOperateOr[i] = operate('.', toOperateOr[i].split('.'))
 
-	return operate('+', toOperateOr)
+	if(len(toOperateOr) > 1) :
+		return operate('+', toOperateOr)
+
+	return toOperateOr[0]
 
 def convert(boolean) :
 	if boolean :
@@ -116,14 +150,28 @@ def convert(boolean) :
 	else :
 		return 0
 
+def decToBin(i) :
+    return bin(i)[2:]
+
 f = raw_input("Entrez une équation : ")
 print "\n-------------------\n"
 f = f.replace(" ", "")
 printInformations(f)
 print "\n-------------------\n"
 
-for i in range(2) :
-	for j in range(2) :
-		for k in range(2) :
-			print "Pour [{}, {}, {}] : {}".format(i, j, k, calculate(f, i, j, k))
-			print "----------"
+for i in range(2 ** getVars(f)[0]) :
+	values = list()
+	binary = decToBin(i)
+	finalBinary = ""
+
+	if len(binary) < getVars(f)[0] :
+		for i in range(getVars(f)[0] - len(binary)) :
+			finalBinary += "0"
+
+	finalBinary += binary
+
+	for c in finalBinary :
+		values.append(c)
+
+	print "Pour {} : {}".format(values, calculate(f, values))
+	print "----------"
