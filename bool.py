@@ -4,8 +4,8 @@
 #Author : Aurélien REY
 #Date : 16th november, 2016
 
-import turtle
-import re
+# import turtle
+import os
 
 allVars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 width, height = 500, 500
@@ -48,31 +48,59 @@ def printInformations(string) :
 	o = 2 ** v
 	print "il y a donc {} états différents donnant {} opérateurs (sorties) possibles,".format(v, o)
 
-def setupTurtle() :
-	turtle.setup(width, height)
-	turtle.title("Bool ! Made for CERI Agroparc")
-	turtle.hideturtle()
-	turtle.up()
-	turtle.goto(-width / 2 + 5, height / 2 - 5)
+# def setupTurtle() :
+# 	turtle.setup(width, height)
+# 	turtle.title("Bool ! Made for CERI Agroparc")
+# 	turtle.hideturtle()
+# 	turtle.up()
+# 	turtle.goto(-width / 2 + 5, height / 2 - 5)
 
-def drawSquare(x, y, c, char) :
-	turtle.up()
-	turtle.goto(x, y)
-	turtle.down()
-	for i in range(4) :
-		turtle.fd(c)
-		turtle.right(90)
-	turtle.up()
-	turtle.goto(x + c / 2 - 5, y - c / 2 - 10)
-	turtle.down()
-	turtle.write(char, font = ("Arial", 15, "bold"))
-	turtle.up()
+# def drawSquare(x, y, c, char) :
+# 	turtle.up()
+# 	turtle.goto(x, y)
+# 	turtle.down()
+# 	for i in range(4) :
+# 		turtle.fd(c)
+# 		turtle.right(90)
+# 	turtle.up()
+# 	turtle.goto(x + c / 2 - 5, y - c / 2 - 10)
+# 	turtle.down()
+# 	turtle.write(char, font = ("Arial", 15, "bold"))
+# 	turtle.up()
+
+def regex(string) :
+	r = 0
+	results = list()
+
+	firstIndex = -1
+
+	for i in range(len(string)) :
+		if string[i] == "(" and r == 0 :
+			firstIndex = i
+			r += 1
+		elif string[i] == "(" :
+			r += 1
+
+		if string[i] == ")" :
+			r -= 1
+
+			if r == 0 :
+				results.append(string[firstIndex + 1 : i])
+
+			if r < 0 : 
+				print "Erreur de parenthèse !"
+
+	if r > 0 :
+		print "Erreur de parenthèse"
+
+	return results
+
 
 def operate(op, vars1) :
-	if len(vars1) == 1 and op == "!" :
+	if len(vars1) == 1 and op == "~" :
 		return not int(vars1[0])
-	elif len(vars1) == 1 and op != "!" :
-		print "Désolé, le seul opérateur qui n'accepte qu'une variable est l'opérateur 'non' ('!')"
+	elif len(vars1) == 1 and op != "~" :
+		print "Désolé, le seul opérateur qui n'accepte qu'une variable est l'opérateur 'not' ('~')"
 
 	if len(vars1) == 2 :
 		if op == '.' :
@@ -106,23 +134,9 @@ def calculate(string, vars1 = None) :
 		for i in range(len(vars2)) :
 			string = string.replace(vars2[i], str(vars1[i]))
 
-	prior = re.split("(\((?s)(.*?)\))", string)
+	prior = regex(string)
 
-	deleted = 0
-	
-	for i in range(len(prior)) :
-		if len(prior[i - deleted]) > 0 :
-			if prior[i - deleted][0] != '(' :
-				del prior[i - deleted]
-				deleted += 1
-		else :
-			del prior[i - deleted]
-			deleted += 1
-
-	prior2 = list()
-
-	for i in prior :
-		prior2.append(i[1:len(i) - 1])
+	prior2 = list(prior)
 
 	for i, v in enumerate(prior2) :
 		prior2[i] = calculate(v)
@@ -130,8 +144,11 @@ def calculate(string, vars1 = None) :
 	for i in range(len(prior)) :
 		string = string.replace(str(prior[i]), str(prior2[i]))
 
-	string = string.replace("!0", "1")
-	string = string.replace("!1", "0")
+	string = string.replace("(", "")
+	string = string.replace(")", "")
+
+	string = string.replace("~0", "1")
+	string = string.replace("~1", "0")
 
 	toOperateOr = string.split('+')
 
@@ -153,9 +170,90 @@ def convert(boolean) :
 def decToBin(i) :
     return bin(i)[2:]
 
+def layout(string) :
+	string = string.replace("or", "+")
+	string = string.replace("and", ".")
+	string = string.replace("nand", ",")
+	string = string.replace("xor", "*")
+	string = string.replace("nor", "-")
+	string = string.replace("nxor", "°")
+	string = string.replace("xnor", "°")
+	string = string.replace("imp", ">")
+	string = string.replace("!", "~")
+	string = string.replace("not", "~")
+
+	return string
+
+def stringContains(string) :
+	nand = "," in string
+	xor = "*" in string
+	nor = "-" in string
+	nxor = "°" in string
+	imp = ">" in string
+
+	return nand or xor or nor or nxor or imp
+
+def formatOperation(string) :
+	while stringContains(string) :
+		for i in range(len(string)) :
+			if string[i] == ">" : #IMPLICATION
+				before = str(string[i - 1])
+				after = str(string[i + 1])
+
+				if before == ")" :
+					r = 0
+					for a in range(i - 1, 0, -1) :
+						if string[a] == "(" and r == 0 :
+							before = string[a, i - 1]
+						elif string[a] == ")" :
+							r += 1
+						elif string[a] == "(" and r > 0 :
+							r -= 1
+
+				tor = before + ">" + after
+
+				tor2 = "(~" + before + "+" + after + ")"
+
+				string = string.replace(tor, tor2)
+
+				break
+
+			if string[i] == "-" : #IMPLICATION
+				before = str(string[i - 1])
+				after = str(string[i + 1])
+
+				if before == ")" :
+					r = 0
+					for a in range(i - 1, 0, -1) :
+						if string[a] == "(" and r == 0 :
+							before = string[a, i - 1]
+						elif string[a] == ")" :
+							r += 1
+						elif string[a] == "(" and r > 0 :
+							r -= 1
+
+				tor = before + "-" + after
+
+				tor2 = "(~(" + before + "+" + after + "))"
+
+				string = string.replace(tor, tor2)
+
+				break
+
+	return string
+
+def clear() :
+	os.system("clear")
+
+clear()
+
 f = raw_input("Entrez une équation : ")
 print "\n-------------------\n"
 f = f.replace(" ", "")
+f = layout(f)
+print "Before format : " + f
+f = formatOperation(f)
+print "After format : " + f
 printInformations(f)
 print "\n-------------------\n"
 
