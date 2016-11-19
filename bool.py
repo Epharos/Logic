@@ -146,8 +146,6 @@ def calculate(string, vars1 = None) :
 	if(len(toOperateOr) > 1) :
 		return operate('+', toOperateOr)
 
-	print toOperateOr[0]
-
 	return toOperateOr[0]
 
 def convert(boolean) :
