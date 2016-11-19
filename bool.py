@@ -2,9 +2,9 @@
 #coding:utf-8
 
 #Author : Aurélien REY
-#Date : 16th november, 2016
+#Date : November 16th 17th and 18th, 2016
+#Utility : L'utilisateur rentre une équation booléenne et le programme retourne un tableau de vérité correspondant à l'équation
 
-# import turtle
 import os
 
 allVars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -43,30 +43,17 @@ def isVarAllowed(char) :
 
 def printInformations(string) :
 	vars1 = getVars(string)
-	print "L'équation contient {} variables différentes,".format(vars1[0])
+	if vars1[0] > 1 :
+		print "L'équation contient {} variables différentes,".format(vars1[0])
+	else :
+		print "L'équation contient {} variable,".format(vars1[0])
 	v = 2 ** vars1[0]
 	o = 2 ** v
-	print "il y a donc {} états différents donnant {} opérateurs (sorties) possibles,".format(v, o)
 
-# def setupTurtle() :
-# 	turtle.setup(width, height)
-# 	turtle.title("Bool ! Made for CERI Agroparc")
-# 	turtle.hideturtle()
-# 	turtle.up()
-# 	turtle.goto(-width / 2 + 5, height / 2 - 5)
-
-# def drawSquare(x, y, c, char) :
-# 	turtle.up()
-# 	turtle.goto(x, y)
-# 	turtle.down()
-# 	for i in range(4) :
-# 		turtle.fd(c)
-# 		turtle.right(90)
-# 	turtle.up()
-# 	turtle.goto(x + c / 2 - 5, y - c / 2 - 10)
-# 	turtle.down()
-# 	turtle.write(char, font = ("Arial", 15, "bold"))
-# 	turtle.up()
+	if v > 1 :
+		print "il y a donc {} lignes au tableau".format(v)
+	else :
+		print "il y a donc {} ligne au tableau".format(v)
 
 def regex(string) :
 	r = 0
@@ -159,6 +146,8 @@ def calculate(string, vars1 = None) :
 	if(len(toOperateOr) > 1) :
 		return operate('+', toOperateOr)
 
+	print toOperateOr[0]
+
 	return toOperateOr[0]
 
 def convert(boolean) :
@@ -176,8 +165,8 @@ def layout(string) :
 	string = string.replace("nand", ",")
 	string = string.replace("xor", "*")
 	string = string.replace("nor", "-")
-	string = string.replace("nxor", "°")
-	string = string.replace("xnor", "°")
+	string = string.replace("nxor", "^")
+	string = string.replace("xnor", "^")
 	string = string.replace("imp", ">")
 	string = string.replace("!", "~")
 	string = string.replace("not", "~")
@@ -188,27 +177,38 @@ def stringContains(string) :
 	nand = "," in string
 	xor = "*" in string
 	nor = "-" in string
-	nxor = "°" in string
+	nxor = "^" in string
 	imp = ">" in string
 
 	return nand or xor or nor or nxor or imp
 
 def formatOperation(string) :
 	while stringContains(string) :
-		for i in range(len(string)) :
+		for i in range(len(string) + 1) :
 			if string[i] == ">" : #IMPLICATION
 				before = str(string[i - 1])
 				after = str(string[i + 1])
 
 				if before == ")" :
 					r = 0
-					for a in range(i - 1, 0, -1) :
+					for a in range(i - 2, -1, -1) :
 						if string[a] == "(" and r == 0 :
-							before = string[a, i - 1]
+							before = string[a : i]
 						elif string[a] == ")" :
 							r += 1
 						elif string[a] == "(" and r > 0 :
 							r -= 1
+
+				if after == "(" :
+					r = 0
+					for a in range(i + 2, len(string)) :
+						if string[a] == ")" and r == 0 :
+							after = string[i + 1 : a + 1]
+						elif string[a] == "(" :
+							r += 1
+						elif string[a] == ")" and r > 0 :
+							r -= 1
+
 
 				tor = before + ">" + after
 
@@ -218,23 +218,129 @@ def formatOperation(string) :
 
 				break
 
-			if string[i] == "-" : #IMPLICATION
+			if string[i] == "-" : #NOR
 				before = str(string[i - 1])
 				after = str(string[i + 1])
 
 				if before == ")" :
 					r = 0
-					for a in range(i - 1, 0, -1) :
+					for a in range(i - 2, -1, -1) :
 						if string[a] == "(" and r == 0 :
-							before = string[a, i - 1]
+							before = string[a : i]
 						elif string[a] == ")" :
 							r += 1
 						elif string[a] == "(" and r > 0 :
 							r -= 1
 
+				if after == "(" :
+					r = 0
+					for a in range(i + 2, len(string)) :
+						if string[a] == ")" and r == 0 :
+							after = string[i + 1 : a + 1]
+						elif string[a] == "(" :
+							r += 1
+						elif string[a] == ")" and r > 0 :
+							r -= 1
+
 				tor = before + "-" + after
 
 				tor2 = "(~(" + before + "+" + after + "))"
+
+				string = string.replace(tor, tor2)
+
+				break
+
+			if string[i] == "," : #NAND
+				before = str(string[i - 1])
+				after = str(string[i + 1])
+
+				if before == ")" :
+					r = 0
+					for a in range(i - 2, -1, -1) :
+						if string[a] == "(" and r == 0 :
+							before = string[a : i]
+						elif string[a] == ")" :
+							r += 1
+						elif string[a] == "(" and r > 0 :
+							r -= 1
+
+				if after == "(" :
+					r = 0
+					for a in range(i + 2, len(string)) :
+						if string[a] == ")" and r == 0 :
+							after = string[i + 1 : a + 1]
+						elif string[a] == "(" :
+							r += 1
+						elif string[a] == ")" and r > 0 :
+							r -= 1
+
+				tor = before + "," + after
+
+				tor2 = "(~(" + before + "." + after + "))"
+
+				string = string.replace(tor, tor2)
+
+				break
+
+			if string[i] == "^" : #NXOR / XNOR
+				before = str(string[i - 1])
+				after = str(string[i + 1])
+
+				if before == ")" :
+					r = 0
+					for a in range(i - 2, -1, -1) :
+						if string[a] == "(" and r == 0 :
+							before = string[a : i]
+						elif string[a] == ")" :
+							r += 1
+						elif string[a] == "(" and r > 0 :
+							r -= 1
+
+				if after == "(" :
+					r = 0
+					for a in range(i + 2, len(string)) :
+						if string[a] == ")" and r == 0 :
+							after = string[i + 1 : a + 1]
+						elif string[a] == "(" :
+							r += 1
+						elif string[a] == ")" and r > 0 :
+							r -= 1
+
+				tor = before + "^" + after
+
+				tor2 = "(~(~" + before + "." + after + "+" + before + ".~" + after + "))"
+
+				string = string.replace(tor, tor2)
+
+				break
+
+			if string[i] == "*" : #XOR
+				before = str(string[i - 1])
+				after = str(string[i + 1])
+
+				if before == ")" :
+					r = 0
+					for a in range(i - 2, -1, -1) :
+						if string[a] == "(" and r == 0 :
+							before = string[a : i]
+						elif string[a] == ")" :
+							r += 1
+						elif string[a] == "(" and r > 0 :
+							r -= 1
+
+				if after == "(" :
+					r = 0
+					for a in range(i + 2, len(string)) :
+						if string[a] == ")" and r == 0 :
+							after = string[i + 1 : a + 1]
+						elif string[a] == "(" :
+							r += 1
+						elif string[a] == ")" and r > 0 :
+							r -= 1
+
+				tor = before + "*" + after
+
+				tor2 = "(~" + before + "." + after + "+" + before + ".~" + after + ")"
 
 				string = string.replace(tor, tor2)
 
@@ -247,15 +353,87 @@ def clear() :
 
 clear()
 
-f = raw_input("Entrez une équation : ")
+print "ÉQUATIONS LOGIQUES"
+
 print "\n-------------------\n"
+
+print "Vous pouvez utiliser les variables suivantes : \"{}\"".format(allVars)
+print "Attention les variables sont sensibles à la casse (A est différent de a) !"
+print "Vous pouvez évidemment utiliser les constantes 0 et 1 dans votre équation"
+print "Les espaces ne sont pas pris en compte par le programme ('aandb' = 'a and b')"
+
+try :
+	raw_input("\nAppuyez sur Entrée")
+except SyntaxError:
+    pass
+
+print "\n-------------------\n"
+
+print "Les opérateurs logiques utilisables sont les suivants : "
+print "(Note : Certains caractères officiels ne sont pas faisables au clavier,"
+print "du coup le programme utilise un peu sa propre notation)"
+print "Porte ET --> \t\t'and'\t'.'"
+print "Porte OU --> \t\t'or'\t'+'"
+print "Porte NON --> \t\t'not'\t'~'\t'!'"
+print "Porte NAND --> \t\t'nand'\t','"
+print "Porte NOR --> \t\t'nor'\t'-'"
+print "Porte XOR --> \t\t'xor'\t'*'"
+print "Porte NXOR/XNOR --> \t'nxor'\t'xnor'\t'^'"
+print "Porte IMPLIQUE --> \t'imp'\t'>'"
+
+try :
+	raw_input("\nAppuyez sur Entrée")
+except SyntaxError:
+    pass
+
+print "\n-------------------\n"
+
+print "Exemples : "
+print "a + b . c"
+print "(a + b) . c"
+print "1 and (a or b)"
+print "~(~(a or b).!c)"
+print "a-b > b"
+
+try :
+	raw_input("\nAppuyez sur Entrée")
+except SyntaxError:
+    pass
+
+print "\n-------------------\n"
+
+print "Le programme gère la priorité et les parenthèses !"
+
+print "\n-------------------\n"
+
+f = ""
+
+while len(f) < 1 :
+	f = raw_input("Entrez une équation (E) : ")
+
+print "\n-------------------\n"
+
 f = f.replace(" ", "")
 f = layout(f)
-print "Before format : " + f
+print "E = " + f
 f = formatOperation(f)
-print "After format : " + f
+# print "Équation après formatage : " + f
+
+print "\n-------------------\n"
+
 printInformations(f)
 print "\n-------------------\n"
+
+top = "\t\t"
+table = {}
+
+for i in range(getVars(f)[0]) :
+	top += "------"
+	table[i, 0] = getVars(f)[1][i]
+
+table[getVars(f)[0], 0] = "E"
+
+top += "--------"
 
 for i in range(2 ** getVars(f)[0]) :
 	values = list()
@@ -263,13 +441,55 @@ for i in range(2 ** getVars(f)[0]) :
 	finalBinary = ""
 
 	if len(binary) < getVars(f)[0] :
-		for i in range(getVars(f)[0] - len(binary)) :
+		for a in range(getVars(f)[0] - len(binary)) :
 			finalBinary += "0"
 
 	finalBinary += binary
 
-	for c in finalBinary :
-		values.append(c)
+	for c in range(len(finalBinary)) :
+		values.append(finalBinary[c])
+		table[c, i + 1] = finalBinary[c]
 
-	print "Pour {} : {}".format(values, calculate(f, values))
-	print "----------"
+	if getVars(f)[0] == 0 :
+		table[0, 1] = f
+		continue
+
+	table[len(finalBinary), i + 1] = calculate(f, values)
+
+	# print "Pour {} : {}".format(values, calculate(f, values))
+	# print "----------"
+
+print "\t\tTABLE DE VÉRITÉ : \n"
+
+print top
+
+for i in range(2 ** getVars(f)[0] + 1) :
+	print "\t\t",
+	for j in range(getVars(f)[0] + 1) :
+		if j != getVars(f)[0] :
+			print "| ", table[j, i], "",
+		else :
+			print "|| ", table[j, i], "",
+
+	print "|\n" + top
+	if i == 0 :
+		print top
+
+try :
+	raw_input("\n\nAppuyez sur Entrée")
+except SyntaxError:
+    pass
+
+print "\n-------------------\n"
+
+print "Le programme est toujours à améliorer, évidemment"
+print "Si vous avez des idées : "
+print "aurelien.rey@alumni.univ-avignon.fr\n"
+print "Le programme et son code sont sous licence Creative Common (BY NC SA)"
+print "C'est à dire que pour l'utilisation/le partage de ce programme/script vous devez : "
+print "\t- Créditer l'auteur (citer son nom)"
+print "\t- Qu'aucune utilisation et qu'aucun partage ne peut faire le fruit d'un bénéfice (vente interdite)"
+print "\t- Que vous devez partager ce programme/code dans les mêmes conditions que celles dans lesquelles vous l'avez trouvé"
+print "Pour en savoir plus : https://creativecommons.org/licenses/by-nc-sa/3.0/fr/\n"
+
+print "Au plaisir de vous revoir ! :)"
